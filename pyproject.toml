@@ -6,8 +6,9 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.95.0",
+    "fire>=0.7.1",
     "python-dotenv>=1.2.2",
 ]
 
 [project.scripts]
-generate-news-article = "main:main"
+generate-news-article = "main:run"
