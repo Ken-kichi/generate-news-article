@@ -1,4 +1,4 @@
-from cmd import CLI
+from cli import CLI
 
 
 def run() -> None:

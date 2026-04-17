@@ -1,18 +1,17 @@
 from pathlib import Path
+
+from config import Config
 from utils import (
     build_edit_user_prompt,
-    save_edited_output,
-    load_system_prompt,
-    save_new_output,
+    build_new_user_prompt,
     create_client,
     generate_text,
-    load_text_file
+    load_system_prompt,
+    load_text_file,
+    sanitize_generated_text,
+    save_edited_output,
+    save_new_output,
 )
-from config import Config
-from pathlib import Path
-from config import Config
-
-conig = Config()
 
 
 class CLI:
@@ -30,7 +29,7 @@ class CLI:
     def new(
         self,
         prompt: str,
-        system_prompt_file: str = conig.default_system_prompt_path,
+        system_prompt_file: str | None = None,
         output_dir: str = "output",
         model: str | None = None,
         max_tokens: int = 20000,
@@ -51,17 +50,20 @@ class CLI:
         """
         if not prompt.strip():
             raise ValueError("prompt is required.")
+        if system_prompt_file is None:
+            system_prompt_file = self.config.default_system_prompt_path
 
         client = create_client(self.config)
         system_prompt = load_system_prompt(system_prompt_file)
         response_text = generate_text(
             client,
             system_prompt=system_prompt,
-            user_prompt=prompt,
+            user_prompt=build_new_user_prompt(prompt),
             model=model or self.config.anthropic_model,
             max_tokens=max_tokens,
             temperature=temperature,
         )
+        response_text = sanitize_generated_text(response_text)
         output_path = save_new_output(response_text, output_dir)
         print(response_text)
         return str(output_path)
@@ -70,7 +72,7 @@ class CLI:
         self,
         target: str,
         prompt: str,
-        system_prompt_file: str = conig.default_system_prompt_path,
+        system_prompt_file: str | None = None,
         output_dir: str = "output",
         model: str | None = None,
         max_tokens: int = 20000,
@@ -95,6 +97,8 @@ class CLI:
             raise FileNotFoundError(f"Target file not found: {target}")
         if not prompt.strip():
             raise ValueError("prompt is required.")
+        if system_prompt_file is None:
+            system_prompt_file = self.config.default_system_prompt_path
 
         client = create_client(self.config)
         system_prompt = load_system_prompt(system_prompt_file)
@@ -108,6 +112,7 @@ class CLI:
             max_tokens=max_tokens,
             temperature=temperature,
         )
+        response_text = sanitize_generated_text(response_text)
         output_path = save_edited_output(response_text, target, output_dir)
         print(response_text)
         return str(output_path)

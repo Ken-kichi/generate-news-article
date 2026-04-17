@@ -5,7 +5,32 @@ from pathlib import Path
 import anthropic
 
 from config import Config
-from cmd import CLI
+
+
+ARTICLE_OUTPUT_RULES = """以下の出力ルールを必ず守ってください。
+- 書籍紹介で扱う本は、Amazon.co.jpのKindle版として実在を確信できる日本語書籍のみです。
+- 架空の書名、著者名、出版社名、発売日、説明は禁止です。
+- Kindleで販売中かつ最新刊だと確認できない場合は、その書籍紹介枠を「該当するKindle書籍を確認できなかったため、このセクションは省略します。」とだけ書いてください。
+- 絵文字は禁止です。
+- Markdownの水平線、区切り線、表は使わないでください。特に `---` は出力しないでください。
+- 出力はMarkdown本文のみとしてください。
+"""
+
+EMOJI_PATTERN = re.compile(
+    "["  # Common emoji blocks.
+    "\U0001F1E6-\U0001F1FF"
+    "\U0001F300-\U0001FAFF"
+    "\u2700-\u27BF"
+    "\u200D"
+    "\uFE0F"
+    "]+"
+)
+MARKDOWN_RULE_PATTERN = re.compile(r"^\s*---+\s*$", re.MULTILINE)
+MARKDOWN_TABLE_SEPARATOR_PATTERN = re.compile(
+    r"^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*$",
+    re.MULTILINE,
+)
+HYPHEN_RUN_PATTERN = re.compile(r"-{3,}")
 
 
 def load_text_file(path: Path) -> str:
@@ -101,6 +126,15 @@ def generate_text(
     return extract_text_content(message)
 
 
+def build_new_user_prompt(instruction: str) -> str:
+    """記事生成用ユーザープロンプトに共通ガードレールを追加する。"""
+    return (
+        f"{ARTICLE_OUTPUT_RULES}\n\n"
+        "## 記事生成の指示\n"
+        f"{instruction}"
+    )
+
+
 def ensure_output_dir(output_dir: str) -> Path:
     """出力先ディレクトリを必要に応じて作成する。
 
@@ -187,6 +221,16 @@ def save_edited_output(text: str, target_path: str, output_dir: str) -> Path:
     return output_path
 
 
+def sanitize_generated_text(text: str) -> str:
+    """禁止している装飾や区切り線を生成結果から除去する。"""
+    sanitized = EMOJI_PATTERN.sub("", text)
+    sanitized = MARKDOWN_TABLE_SEPARATOR_PATTERN.sub("", sanitized)
+    sanitized = MARKDOWN_RULE_PATTERN.sub("", sanitized)
+    sanitized = HYPHEN_RUN_PATTERN.sub("--", sanitized)
+    sanitized = re.sub(r"\n{3,}", "\n\n", sanitized)
+    return sanitized.strip()
+
+
 def build_edit_user_prompt(existing_text: str, instruction: str) -> str:
     """元記事と修正指示から編集用ユーザープロンプトを組み立てる。
 
@@ -198,6 +242,7 @@ def build_edit_user_prompt(existing_text: str, instruction: str) -> str:
         str: Anthropic に渡す編集用ユーザープロンプト。
     """
     return (
+        f"{ARTICLE_OUTPUT_RULES}\n\n"
         "以下のMarkdown記事をベースに、修正指示を反映した完成版の記事を作成してください。\n"
         "出力は修正後のMarkdown本文のみとしてください。\n\n"
         "## 元記事\n"
