@@ -34,6 +34,8 @@ class CLI:
         model: str | None = None,
         max_tokens: int = 20000,
         temperature: float = 1.0,
+        enable_web_search: bool = False,
+        web_search_max_uses: int = 10,
     ) -> str:
         """新規記事を生成して output ディレクトリに保存する。
 
@@ -44,6 +46,8 @@ class CLI:
             model: 使用する Anthropic モデル名。未指定時は設定値を使う。
             max_tokens: 生成時の最大トークン数。
             temperature: 生成時の温度パラメータ。
+            enable_web_search: Web検索ツールを有効化するか。
+            web_search_max_uses: 1リクエスト中に許可する検索回数。
 
         戻り値:
             str: 保存した Markdown ファイルのパス。
@@ -62,11 +66,69 @@ class CLI:
             model=model or self.config.anthropic_model,
             max_tokens=max_tokens,
             temperature=temperature,
+            enable_web_search=enable_web_search,
+            web_search_max_uses=web_search_max_uses,
         )
         response_text = sanitize_generated_text(response_text)
         output_path = save_new_output(response_text, output_dir)
         print(response_text)
         return str(output_path)
+
+    def new_web(
+        self,
+        prompt: str,
+        system_prompt_file: str | None = None,
+        output_dir: str = "output",
+        model: str | None = None,
+        max_tokens: int = 20000,
+        temperature: float = 1.0,
+        web_search_max_uses: int = 10,
+    ) -> str:
+        """Web検索を有効化して新規記事を生成する短縮コマンド。
+
+        引数:
+            prompt: 記事生成の指示文。
+            system_prompt_file: system prompt を読み込むファイルパス。
+            output_dir: 生成結果の保存先ディレクトリ。
+            model: 使用する Anthropic モデル名。未指定時は設定値を使う。
+            max_tokens: 生成時の最大トークン数。
+            temperature: 生成時の温度パラメータ。
+            web_search_max_uses: 1リクエスト中に許可する検索回数。
+
+        戻り値:
+            str: 保存した Markdown ファイルのパス。
+        """
+        return self.new(
+            prompt=prompt,
+            system_prompt_file=system_prompt_file,
+            output_dir=output_dir,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            enable_web_search=True,
+            web_search_max_uses=web_search_max_uses,
+        )
+
+    def nw(
+        self,
+        prompt: str,
+        system_prompt_file: str | None = None,
+        output_dir: str = "output",
+        model: str | None = None,
+        max_tokens: int = 20000,
+        temperature: float = 1.0,
+        web_search_max_uses: int = 5,
+    ) -> str:
+        """`new_web` の短いエイリアス。"""
+        return self.new_web(
+            prompt=prompt,
+            system_prompt_file=system_prompt_file,
+            output_dir=output_dir,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            web_search_max_uses=web_search_max_uses,
+        )
 
     def edit(
         self,
@@ -77,6 +139,8 @@ class CLI:
         model: str | None = None,
         max_tokens: int = 20000,
         temperature: float = 1.0,
+        enable_web_search: bool = False,
+        web_search_max_uses: int = 10,
     ) -> str:
         """既存記事をもとに修正版を生成して保存する。
 
@@ -88,6 +152,8 @@ class CLI:
             model: 使用する Anthropic モデル名。未指定時は設定値を使う。
             max_tokens: 生成時の最大トークン数。
             temperature: 生成時の温度パラメータ。
+            enable_web_search: Web検索ツールを有効化するか。
+            web_search_max_uses: 1リクエスト中に許可する検索回数。
 
         戻り値:
             str: 保存した修正版 Markdown ファイルのパス。
@@ -111,6 +177,8 @@ class CLI:
             model=model or self.config.anthropic_model,
             max_tokens=max_tokens,
             temperature=temperature,
+            enable_web_search=enable_web_search,
+            web_search_max_uses=web_search_max_uses,
         )
         response_text = sanitize_generated_text(response_text)
         output_path = save_edited_output(response_text, target, output_dir)

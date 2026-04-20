@@ -10,7 +10,8 @@ from config import Config
 ARTICLE_OUTPUT_RULES = """以下の出力ルールを必ず守ってください。
 - 書籍紹介で扱う本は、Amazon.co.jpのKindle版として実在を確信できる日本語書籍のみです。
 - 架空の書名、著者名、出版社名、発売日、説明は禁止です。
-- Kindleで販売中かつ最新刊だと確認できない場合は、その書籍紹介枠を「該当するKindle書籍を確認できなかったため、このセクションは省略します。」とだけ書いてください。
+- Kindleで販売中かつ最新刊を断定できない場合でも、省略せず「最新候補」として紹介してください。
+- その際は各書籍に「確認日（YYYY-MM-DD）」と「確認できた事実（Kindle版あり/発売日/カテゴリなど）」を明記し、断定表現は避けてください。
 - 絵文字は禁止です。
 - Markdownの水平線、区切り線、表は使わないでください。特に `---` は出力しないでください。
 - 出力はMarkdown本文のみとしてください。
@@ -99,6 +100,8 @@ def generate_text(
     model: str,
     max_tokens: int,
     temperature: float,
+    enable_web_search: bool = False,
+    web_search_max_uses: int = 10,
 ) -> str:
     """Anthropic にプロンプトを送って記事本文を生成する。
 
@@ -113,16 +116,27 @@ def generate_text(
     戻り値:
         str: 生成されたテキスト本文。
     """
-    message = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        system=system_prompt,
-        messages=[
+    request_kwargs: dict = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "system": system_prompt,
+        "messages": [
             {"role": "user", "content": user_prompt},
         ],
-        thinking={"type": "disabled"},
-    )
+        "thinking": {"type": "disabled"},
+    }
+    if enable_web_search:
+        if web_search_max_uses < 1:
+            raise ValueError("web_search_max_uses must be >= 1.")
+        request_kwargs["tools"] = [{
+            "type": "web_search_20250305",
+            "name": "web_search",
+            "max_uses": web_search_max_uses,
+        }]
+        request_kwargs["tool_choice"] = {"type": "any"}
+
+    message = client.messages.create(**request_kwargs)
     return extract_text_content(message)
 
 
