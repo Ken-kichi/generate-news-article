@@ -1,6 +1,7 @@
 
 
 def main():
+    """サンプル記事から要約行を抽出して標準出力に表示する。"""
     with open("output/20260417_090640_edited_ver1.md", "r") as f:
         content = f.read()
         split_content = content.split("\n\n")

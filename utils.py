@@ -266,6 +266,14 @@ def build_edit_user_prompt(existing_text: str, instruction: str) -> str:
 
 
 def get_summary(path):
+    """記事ファイルからサムネイル生成向けの要約文字列を抽出する。
+
+    引数:
+        path: 要約抽出対象の Markdown ファイルパス。
+
+    戻り値:
+        str: 先頭段落と本文の一部を連結した要約文字列。
+    """
     with open(path, "r") as f:
         content = f.read()
         split_content = content.split("\n\n")
@@ -275,6 +283,15 @@ def get_summary(path):
 
 
 def generate_thumbnail(summary, output_image_folder):
+    """要約文から Gemini でサムネイル画像を生成して保存する。
+
+    引数:
+        summary: 画像生成の元になる要約テキスト。
+        output_image_folder: 生成画像の保存先ディレクトリ。
+
+    戻り値:
+        なし
+    """
     config = Config()
     # APIキーを設定
     client = genai.Client(api_key=config.gemini_api_key)
