@@ -1,5 +1,26 @@
 # generate-news-article
 
+### 記事を新規で生成したいとき
+1. prompt/prompt_ver6.md　を開く
+2. 「# Input Data（対象記事）」にニュース記事の全文をペースト
+3. 以下のコマンドを実行
+
+```bash
+uv run main.py new \
+  --prompt="紹介する本はKindleで販売されている最新のものにしてください。" \
+  --enable_web_search=true \
+  --web_search_max_uses=5
+```
+
+### 記事を編集したいとき
+1. 以下のコマンドを実行
+
+```bash
+uv run main.py edit \
+  --target=output/20260416_215402.md \
+  --prompt="タイトルに合った内容にリライトしてください。"
+```
+
 Anthropic APIを使ってMarkdown記事を生成・修正する CLI ツールです。
 `python-fire` ベースで `new` と `edit` の 2 コマンドを提供します。
 

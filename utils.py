@@ -1,17 +1,16 @@
 import datetime as dt
 import re
 from pathlib import Path
-
 import anthropic
-
 from config import Config
+from io import BytesIO
+from PIL import Image
+from google import genai
 
 
 ARTICLE_OUTPUT_RULES = """以下の出力ルールを必ず守ってください。
 - 書籍紹介で扱う本は、Amazon.co.jpのKindle版として実在を確信できる日本語書籍のみです。
 - 架空の書名、著者名、出版社名、発売日、説明は禁止です。
-- Kindleで販売中かつ最新刊を断定できない場合でも、省略せず「最新候補」として紹介してください。
-- その際は各書籍に「確認日（YYYY-MM-DD）」と「確認できた事実（Kindle版あり/発売日/カテゴリなど）」を明記し、断定表現は避けてください。
 - 絵文字は禁止です。
 - Markdownの水平線、区切り線、表は使わないでください。特に `---` は出力しないでください。
 - 出力はMarkdown本文のみとしてください。
@@ -264,3 +263,32 @@ def build_edit_user_prompt(existing_text: str, instruction: str) -> str:
         "## 修正指示\n"
         f"{instruction}"
     )
+
+
+def get_summary(path):
+    with open(path, "r") as f:
+        content = f.read()
+        split_content = content.split("\n\n")
+        summary = split_content[0] + "\n" + split_content[3]
+        print(summary)
+        return summary
+
+
+def generate_thumbnail(summary, output_image_folder):
+    config = Config()
+    # APIキーを設定
+    client = genai.Client(api_key=config.gemini_api_key)
+
+    # 画像生成の実行（モデル名は随時更新されます）
+    response = client.models.generate_content(
+        model="gemini-3.1-flash-image-preview",
+        contents=f"{summary}\n\nこの内容をイメージしたnoteのサムネイルを生成してください。"
+    )
+
+    # 生成された画像データを保存
+    for part in response.candidates[0].content.parts:
+        if part.inline_data:
+            image_data = BytesIO(part.inline_data.data)
+            img = Image.open(image_data)
+            img.save(
+                f"{output_image_folder}/{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.png")

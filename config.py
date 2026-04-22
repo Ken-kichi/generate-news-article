@@ -21,3 +21,4 @@ class Config:
             os.getenv("MAX_EVALUATION_RETRIES", "2"))
         self.default_system_prompt_path = os.getenv(
             "DEFAULT_SYSTEM_PROMPT_PATH", "prompt/prompt_ver6.md")
+        self.gemini_api_key = os.getenv("GEMINI_API_KEY")
